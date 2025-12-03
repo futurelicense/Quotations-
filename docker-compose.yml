@@ -1,0 +1,78 @@
+version: '3.8'
+
+services:
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: invoicepro-frontend
+    ports:
+      - "80:80"
+    environment:
+      - NODE_ENV=production
+    restart: unless-stopped
+    networks:
+      - invoicepro-network
+    depends_on:
+      - backend
+
+  # Backend service (placeholder - configure based on your backend)
+  backend:
+    image: your-backend-image:latest
+    container_name: invoicepro-backend
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=postgresql://postgres:password@db:5432/invoicepro
+      - REDIS_URL=redis://redis:6379
+    restart: unless-stopped
+    networks:
+      - invoicepro-network
+    depends_on:
+      - db
+      - redis
+
+  # Database
+  db:
+    image: postgres:15-alpine
+    container_name: invoicepro-db
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=invoicepro
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+    networks:
+      - invoicepro-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis cache
+  redis:
+    image: redis:7-alpine
+    container_name: invoicepro-redis
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+    networks:
+      - invoicepro-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+networks:
+  invoicepro-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  redis_data:
+
