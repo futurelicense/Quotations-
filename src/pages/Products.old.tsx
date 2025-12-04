@@ -11,7 +11,7 @@ import { EmptyState } from '../components/ui/EmptyState';
 import { useToast } from '../components/ui/Toast';
 import { useAuth } from '../contexts/AuthContext';
 import { productsService } from '../services/supabase-client.service';
-import { PlusIcon, SearchIcon, PackageIcon, EditIcon, TrashIcon, DollarSignIcon } from 'lucide-react';
+import { PlusIcon, SearchIcon, PackageIcon, EditIcon, TrashIcon, TagIcon, DollarSignIcon } from 'lucide-react';
 
 interface ProductFormData {
   name: string;
@@ -132,32 +132,32 @@ export function Products() {
       render: (value: string, row: any) => (
         <div>
           <p className="font-medium text-gray-900">{value}</p>
-          <p className="text-sm text-gray-500">{row.description}</p>
+          <p className="text-sm text-gray-500">{row.description.substring(0, 50)}...</p>
         </div>
-      ),
-    },
-    {
-      key: 'sku',
-      label: 'SKU',
-      render: (value: string) => (
-        <span className="text-sm text-gray-900">{value || 'N/A'}</span>
       ),
     },
     {
       key: 'type',
       label: 'Type',
       render: (value: string) => (
-        <Badge variant={value === 'product' ? 'default' : 'primary'}>
+        <Badge variant={value === 'product' ? 'default' : 'success'}>
           {value}
         </Badge>
+      ),
+    },
+    {
+      key: 'sku',
+      label: 'SKU',
+      render: (value: string) => (
+        <span className="text-sm text-gray-600">{value || '-'}</span>
       ),
     },
     {
       key: 'price',
       label: 'Price',
       render: (value: number, row: any) => (
-        <span className="text-sm font-medium text-gray-900">
-          {row.currency} {value.toLocaleString()}
+        <span className="font-semibold text-gray-900">
+          {row.currency} ${value.toLocaleString()}
         </span>
       ),
     },
@@ -198,7 +198,7 @@ export function Products() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Products & Services</h1>
-          <p className="text-gray-500 mt-1">Manage your product and service catalog</p>
+          <p className="text-gray-500 mt-1">Manage your product catalog</p>
         </div>
         <Button
           onClick={() => {
@@ -230,7 +230,7 @@ export function Products() {
           <EmptyState
             icon={<PackageIcon className="w-12 h-12" />}
             title="No products found"
-            description={searchQuery ? "No products match your search" : "Add your first product or service to get started"}
+            description={searchQuery ? "No products match your search" : "Add your first product to get started"}
             action={
               !searchQuery && (
                 <Button onClick={() => setIsModalOpen(true)}>
@@ -251,54 +251,45 @@ export function Products() {
           setEditingProduct(null);
           setFormData(initialFormData);
         }}
-        title={editingProduct ? 'Edit Product/Service' : 'Add New Product/Service'}
+        title={editingProduct ? 'Edit Product' : 'Add New Product/Service'}
       >
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <Input
-              label="Name"
-              required
-              value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              placeholder="e.g., Web Development"
-            />
-            <Select
-              label="Type"
-              value={formData.type}
-              onChange={(e) => setFormData({ ...formData, type: e.target.value as 'product' | 'service' })}
-              options={[
-                { value: 'product', label: 'Product' },
-                { value: 'service', label: 'Service' },
-              ]}
-            />
-          </div>
+          <Input
+            label="Name"
+            required
+            value={formData.name}
+            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+            placeholder="Website Development"
+          />
 
           <Textarea
             label="Description"
             required
             value={formData.description}
             onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-            placeholder="Describe your product or service"
+            placeholder="Custom website design and development..."
             rows={3}
           />
 
           <div className="grid grid-cols-2 gap-4">
+            <Select
+              label="Type"
+              value={formData.type}
+              onChange={(e) => setFormData({ ...formData, type: e.target.value as 'product' | 'service' })}
+              options={[
+                { value: 'service', label: 'Service' },
+                { value: 'product', label: 'Product' },
+              ]}
+            />
             <Input
               label="SKU (Optional)"
               value={formData.sku}
               onChange={(e) => setFormData({ ...formData, sku: e.target.value })}
-              placeholder="e.g., WEB-001"
-            />
-            <Input
-              label="Category"
-              required
-              value={formData.category}
-              onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-              placeholder="e.g., Development"
+              placeholder="WEB-DEV-001"
             />
           </div>
 
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-2 gap-4">
             <Input
               label="Price"
               type="number"
@@ -307,7 +298,22 @@ export function Products() {
               min="0"
               value={formData.price}
               onChange={(e) => setFormData({ ...formData, price: parseFloat(e.target.value) || 0 })}
+              placeholder="2500.00"
             />
+            <Select
+              label="Currency"
+              value={formData.currency}
+              onChange={(e) => setFormData({ ...formData, currency: e.target.value })}
+              options={[
+                { value: 'USD', label: 'USD - US Dollar' },
+                { value: 'EUR', label: 'EUR - Euro' },
+                { value: 'GBP', label: 'GBP - British Pound' },
+                { value: 'NGN', label: 'NGN - Nigerian Naira' },
+              ]}
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
             <Input
               label="Tax Rate (%)"
               type="number"
@@ -316,17 +322,14 @@ export function Products() {
               max="100"
               value={formData.tax_rate}
               onChange={(e) => setFormData({ ...formData, tax_rate: parseFloat(e.target.value) || 0 })}
+              placeholder="8.5"
             />
-            <Select
-              label="Currency"
-              value={formData.currency}
-              onChange={(e) => setFormData({ ...formData, currency: e.target.value })}
-              options={[
-                { value: 'USD', label: 'USD ($)' },
-                { value: 'EUR', label: 'EUR (€)' },
-                { value: 'GBP', label: 'GBP (£)' },
-                { value: 'NGN', label: 'NGN (₦)' },
-              ]}
+            <Input
+              label="Category"
+              required
+              value={formData.category}
+              onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+              placeholder="Development"
             />
           </div>
 
@@ -361,3 +364,4 @@ export function Products() {
     </div>
   );
 }
+
