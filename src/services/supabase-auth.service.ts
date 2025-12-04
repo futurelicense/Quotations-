@@ -216,6 +216,27 @@ class SupabaseAuthService {
       callback(event, session);
     });
   }
+
+  /**
+   * Alias for login - for compatibility with AuthContext
+   */
+  async signIn(credentials: { email: string; password: string }) {
+    return this.login(credentials);
+  }
+
+  /**
+   * Alias for register - for compatibility with AuthContext
+   */
+  async signUp(data: { email: string; password: string; fullName: string; company?: string }) {
+    return this.register(data);
+  }
+
+  /**
+   * Alias for logout - for compatibility
+   */
+  async signOut() {
+    return this.logout();
+  }
 }
 
 export const supabaseAuthService = new SupabaseAuthService();

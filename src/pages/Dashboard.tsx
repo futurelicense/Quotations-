@@ -1,75 +1,72 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card } from '../components/ui/Card';
+import { useAuth } from '../contexts/AuthContext';
+import { dashboardService } from '../services/supabase-client.service';
 import { TrendingUpIcon, TrendingDownIcon, UsersIcon, FileTextIcon, ReceiptIcon, DollarSignIcon } from 'lucide-react';
+
 export function Dashboard() {
-  const stats = [{
+  const { user } = useAuth();
+  const [stats, setStats] = useState<any>(null);
+  const [recentInvoices, setRecentInvoices] = useState<any[]>([]);
+  const [recentQuotations, setRecentQuotations] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (user) {
+      loadDashboardData();
+    }
+  }, [user]);
+
+  const loadDashboardData = async () => {
+    try {
+      setLoading(true);
+      const [statsData, invoicesData, quotationsData] = await Promise.all([
+        dashboardService.getStats(user!.id),
+        dashboardService.getRecentInvoices(user!.id, 4),
+        dashboardService.getRecentQuotations(user!.id, 3),
+      ]);
+      setStats(statsData);
+      setRecentInvoices(invoicesData || []);
+      setRecentQuotations(quotationsData || []);
+    } catch (error) {
+      console.error('Error loading dashboard:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading || !stats) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <p className="text-gray-500">Loading dashboard...</p>
+      </div>
+    );
+  }
+
+  const statsDisplay = [{
     label: 'Total Revenue',
-    value: '$124,500',
+    value: `$${stats.totalRevenue.toLocaleString()}`,
     change: '+12.5%',
     trend: 'up',
     icon: <DollarSignIcon className="w-6 h-6" />
   }, {
     label: 'Total Invoices',
-    value: '156',
+    value: stats.totalInvoices.toString(),
     change: '+8.2%',
     trend: 'up',
     icon: <ReceiptIcon className="w-6 h-6" />
   }, {
     label: 'Active Clients',
-    value: '48',
+    value: stats.totalClients.toString(),
     change: '+15.3%',
     trend: 'up',
     icon: <UsersIcon className="w-6 h-6" />
   }, {
     label: 'Pending Payments',
-    value: '$28,400',
+    value: `$${stats.pendingPayments.toLocaleString()}`,
     change: '-3.1%',
     trend: 'down',
     icon: <FileTextIcon className="w-6 h-6" />
-  }];
-  const recentInvoices = [{
-    id: 'INV-001',
-    client: 'Acme Corp',
-    amount: '$5,200',
-    status: 'paid',
-    date: '2024-01-15'
-  }, {
-    id: 'INV-002',
-    client: 'Tech Solutions',
-    amount: '$3,800',
-    status: 'pending',
-    date: '2024-01-14'
-  }, {
-    id: 'INV-003',
-    client: 'Global Industries',
-    amount: '$12,500',
-    status: 'overdue',
-    date: '2024-01-10'
-  }, {
-    id: 'INV-004',
-    client: 'StartUp Inc',
-    amount: '$2,100',
-    status: 'paid',
-    date: '2024-01-12'
-  }];
-  const recentQuotations = [{
-    id: 'QUO-001',
-    client: 'New Client Ltd',
-    amount: '$8,400',
-    status: 'sent',
-    date: '2024-01-16'
-  }, {
-    id: 'QUO-002',
-    client: 'Enterprise Co',
-    amount: '$15,200',
-    status: 'approved',
-    date: '2024-01-15'
-  }, {
-    id: 'QUO-003',
-    client: 'Small Business',
-    amount: '$1,900',
-    status: 'draft',
-    date: '2024-01-14'
   }];
   return <div className="space-y-6">
       <div>
@@ -80,7 +77,7 @@ export function Dashboard() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {stats.map((stat, index) => <Card key={index} padding="md">
+        {statsDisplay.map((stat, index) => <Card key={index} padding="md">
             <div className="flex items-start justify-between">
               <div>
                 <p className="text-sm text-gray-500 mb-1">{stat.label}</p>
@@ -111,20 +108,24 @@ export function Dashboard() {
             </a>
           </div>
           <div className="space-y-3">
-            {recentInvoices.map(invoice => <div key={invoice.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+            {recentInvoices.length === 0 ? (
+              <p className="text-sm text-gray-500 text-center py-4">No invoices yet</p>
+            ) : (
+              recentInvoices.map(invoice => <div key={invoice.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                 <div>
-                  <p className="font-medium text-gray-900">{invoice.id}</p>
-                  <p className="text-sm text-gray-500">{invoice.client}</p>
+                  <p className="font-medium text-gray-900">{invoice.invoice_number}</p>
+                  <p className="text-sm text-gray-500">{invoice.clients?.name || 'Unknown'}</p>
                 </div>
                 <div className="text-right">
                   <p className="font-semibold text-gray-900">
-                    {invoice.amount}
+                    ${invoice.total.toLocaleString()}
                   </p>
-                  <span className={`text-xs px-2 py-1 rounded-full ${invoice.status === 'paid' ? 'bg-green-100 text-green-700' : invoice.status === 'pending' ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'}`}>
+                  <span className={`text-xs px-2 py-1 rounded-full ${invoice.status === 'paid' ? 'bg-green-100 text-green-700' : invoice.status === 'sent' ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'}`}>
                     {invoice.status}
                   </span>
                 </div>
-              </div>)}
+              </div>)
+            )}
           </div>
         </Card>
 
@@ -138,18 +139,22 @@ export function Dashboard() {
             </a>
           </div>
           <div className="space-y-3">
-            {recentQuotations.map(quote => <div key={quote.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+            {recentQuotations.length === 0 ? (
+              <p className="text-sm text-gray-500 text-center py-4">No quotations yet</p>
+            ) : (
+              recentQuotations.map(quote => <div key={quote.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                 <div>
-                  <p className="font-medium text-gray-900">{quote.id}</p>
-                  <p className="text-sm text-gray-500">{quote.client}</p>
+                  <p className="font-medium text-gray-900">{quote.quotation_number}</p>
+                  <p className="text-sm text-gray-500">{quote.clients?.name || 'Unknown'}</p>
                 </div>
                 <div className="text-right">
-                  <p className="font-semibold text-gray-900">{quote.amount}</p>
+                  <p className="font-semibold text-gray-900">${quote.total.toLocaleString()}</p>
                   <span className={`text-xs px-2 py-1 rounded-full ${quote.status === 'approved' ? 'bg-green-100 text-green-700' : quote.status === 'sent' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-700'}`}>
                     {quote.status}
                   </span>
                 </div>
-              </div>)}
+              </div>)
+            )}
           </div>
         </Card>
       </div>
