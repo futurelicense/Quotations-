@@ -36,7 +36,7 @@ const initialFormData: ClientFormData = {
   status: 'active',
 };
 
-export function Clients() {
+export function ClientsNew() {
   const [clients, setClients] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
