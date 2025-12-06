@@ -147,7 +147,7 @@ export function Products() {
       key: 'type',
       label: 'Type',
       render: (value: string) => (
-        <Badge variant={value === 'product' ? 'default' : 'primary'}>
+        <Badge variant={value === 'product' ? 'default' : 'info'}>
           {value}
         </Badge>
       ),

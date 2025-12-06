@@ -12,7 +12,7 @@ import { useToast } from '../components/ui/Toast';
 import { useAuth } from '../contexts/AuthContext';
 import { quotationsService, clientsService, productsService } from '../services/supabase-client.service';
 import { generateQuotationNumber } from '../utils/generators';
-import { PlusIcon, SearchIcon, FileTextIcon, EditIcon, TrashIcon, ArrowRightIcon } from 'lucide-react';
+import { PlusIcon, SearchIcon, FileTextIcon, TrashIcon, ArrowRightIcon } from 'lucide-react';
 
 interface QuotationFormData {
   client_id: string;
@@ -311,13 +311,10 @@ export function Quotations() {
             icon={<FileTextIcon className="w-12 h-12" />}
             title="No quotations found"
             description={searchQuery ? "No quotations match your search" : "Create your first quotation"}
-            action={
-              !searchQuery && (
-                <Button onClick={() => setIsModalOpen(true)}>
-                  Create Your First Quotation
-                </Button>
-              )
-            }
+            action={!searchQuery ? {
+              label: 'Create Your First Quotation',
+              onClick: () => setIsModalOpen(true)
+            } : undefined as { label: string; onClick: () => void } | undefined}
           />
         ) : (
           <Table columns={columns} data={filteredQuotations} />

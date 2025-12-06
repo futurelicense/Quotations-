@@ -147,7 +147,7 @@ export function Products() {
       key: 'type',
       label: 'Type',
       render: (value: string) => (
-        <Badge variant={value === 'product' ? 'default' : 'primary'}>
+        <Badge variant={value === 'product' ? 'default' : 'info'}>
           {value}
         </Badge>
       ),
@@ -231,13 +231,10 @@ export function Products() {
             icon={<PackageIcon className="w-12 h-12" />}
             title="No products found"
             description={searchQuery ? "No products match your search" : "Add your first product or service to get started"}
-            action={
-              !searchQuery && (
-                <Button onClick={() => setIsModalOpen(true)}>
-                  Add Your First Product
-                </Button>
-              )
-            }
+            action={!searchQuery ? {
+              label: 'Add Your First Product',
+              onClick: () => setIsModalOpen(true)
+            } : undefined as { label: string; onClick: () => void } | undefined}
           />
         ) : (
           <Table columns={columns} data={filteredProducts} />

@@ -586,13 +586,10 @@ export function Quotations() {
               icon={<FileTextIcon className="w-12 h-12" />}
               title="No quotations found"
               description={searchQuery ? "No quotations match your search" : "Create your first quotation"}
-              action={
-                !searchQuery && (
-                  <Button onClick={() => setShowForm(true)}>
-                    Create Your First Quotation
-                  </Button>
-                )
-              }
+              action={!searchQuery ? {
+                label: 'Create Your First Quotation',
+                onClick: () => setShowForm(true)
+              } : undefined as { label: string; onClick: () => void } | undefined}
             />
           ) : (
             <Table columns={columns} data={filteredQuotations} />

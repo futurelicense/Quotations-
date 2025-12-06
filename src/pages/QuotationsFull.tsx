@@ -12,7 +12,7 @@ import { useToast } from '../components/ui/Toast';
 import { useAuth } from '../contexts/AuthContext';
 import { quotationsService, clientsService, productsService } from '../services/supabase-client.service';
 import { generateQuotationNumber } from '../utils/generators';
-import { PlusIcon, SearchIcon, FileTextIcon, EditIcon, TrashIcon, ArrowRightIcon } from 'lucide-react';
+import { PlusIcon, SearchIcon, FileTextIcon, TrashIcon, ArrowRightIcon } from 'lucide-react';
 
 interface LineItem {
   product_id: string;
@@ -227,7 +227,7 @@ export function Quotations() {
     {
       key: 'total',
       label: 'Amount',
-      render: (value: number, row: any) => (
+      render: (value: number) => (
         <span className="font-medium">${value.toLocaleString()}</span>
       ),
     },
@@ -248,7 +248,7 @@ export function Quotations() {
     {
       key: 'actions',
       label: 'Actions',
-      render: (_: any, row: any) => (
+      render: (_: any, _row: any) => (
         <div className="flex gap-2">
           {row.status !== 'converted' && (
             <Button 
@@ -307,13 +307,10 @@ export function Quotations() {
             icon={<FileTextIcon className="w-12 h-12" />}
             title="No quotations found"
             description={searchQuery ? "No quotations match your search" : "Create your first quotation"}
-            action={
-              !searchQuery && (
-                <Button onClick={() => setIsModalOpen(true)}>
-                  Create First Quotation
-                </Button>
-              )
-            }
+            action={!searchQuery ? {
+              label: 'Create First Quotation',
+              onClick: () => setIsModalOpen(true)
+            } : undefined}
           />
         ) : (
           <Table columns={columns} data={filteredQuotations} />
