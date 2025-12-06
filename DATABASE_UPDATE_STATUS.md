@@ -87,3 +87,4 @@ You should see both columns listed.
 - ✅ `supabase/schema.sql` - Updated to include new fields
 - ✅ `supabase/add-quotation-fields.sql` - Migration file for existing databases
 
+

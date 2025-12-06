@@ -22,3 +22,4 @@ AND column_name IN ('reference_number', 'shipping_charges');
 -- Success! New fields added to quotations table
 
 
+

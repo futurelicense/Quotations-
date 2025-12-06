@@ -441,3 +441,4 @@ Your InvoicePro is now fully integrated with Supabase!
 *For questions or issues, refer to SUPABASE_SETUP.md or SUPABASE_QUICK_START.md*
 
 
+

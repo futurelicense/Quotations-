@@ -185,3 +185,4 @@ All services have been added to `src/services/supabase-client.service.ts`:
 
 All pages are now **fully functional and CRUD ready**! 🎉
 
+

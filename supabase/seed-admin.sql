@@ -22,3 +22,4 @@ FROM public.profiles
 WHERE email = 'admin@demo.com';
 
 
+
