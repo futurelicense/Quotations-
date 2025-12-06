@@ -58,6 +58,7 @@ CREATE TABLE IF NOT EXISTS public.quotations (
   user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
   client_id UUID REFERENCES public.clients(id) ON DELETE CASCADE NOT NULL,
   quotation_number TEXT UNIQUE NOT NULL,
+  reference_number TEXT,
   date DATE NOT NULL,
   expiry_date DATE NOT NULL,
   status TEXT DEFAULT 'draft' CHECK (status IN ('draft', 'sent', 'approved', 'rejected', 'expired', 'converted')),
@@ -65,6 +66,7 @@ CREATE TABLE IF NOT EXISTS public.quotations (
   subtotal NUMERIC(12, 2) DEFAULT 0,
   tax_amount NUMERIC(12, 2) DEFAULT 0,
   discount_amount NUMERIC(12, 2) DEFAULT 0,
+  shipping_charges NUMERIC(12, 2) DEFAULT 0,
   total NUMERIC(12, 2) DEFAULT 0,
   currency TEXT DEFAULT 'USD',
   notes TEXT,
@@ -73,6 +75,10 @@ CREATE TABLE IF NOT EXISTS public.quotations (
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- Create index for reference_number for faster searches
+CREATE INDEX IF NOT EXISTS idx_quotations_reference_number 
+ON public.quotations(reference_number);
 
 -- Create invoices table
 CREATE TABLE IF NOT EXISTS public.invoices (

@@ -21,3 +21,4 @@ SELECT id, email, full_name, role, created_at
 FROM public.profiles 
 WHERE email = 'admin@demo.com';
 
+

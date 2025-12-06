@@ -451,10 +451,432 @@ export class DashboardService {
   }
 }
 
+// Templates Service
+export class TemplatesService {
+  async getAll(userId: string) {
+    const { data, error } = await supabase
+      .from('templates')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false });
+    
+    if (error) throw error;
+    return data;
+  }
+
+  async getById(id: string) {
+    const { data, error } = await supabase
+      .from('templates')
+      .select('*')
+      .eq('id', id)
+      .single();
+    
+    if (error) throw error;
+    return data;
+  }
+
+  async create(userId: string, template: any) {
+    const { data, error } = await supabase
+      .from('templates')
+      .insert([{
+        user_id: userId,
+        ...template,
+      }])
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return data;
+  }
+
+  async update(id: string, updates: any) {
+    const { data, error } = await supabase
+      .from('templates')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return data;
+  }
+
+  async delete(id: string) {
+    const { error } = await supabase
+      .from('templates')
+      .delete()
+      .eq('id', id);
+    
+    if (error) throw error;
+  }
+
+  async setDefault(userId: string, templateId: string, type: string) {
+    // First, unset all defaults of this type
+    await supabase
+      .from('templates')
+      .update({ is_default: false })
+      .eq('user_id', userId)
+      .eq('type', type);
+    
+    // Then set the new default
+    const { data, error } = await supabase
+      .from('templates')
+      .update({ is_default: true })
+      .eq('id', templateId)
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return data;
+  }
+}
+
+// Automations Service
+export class AutomationsService {
+  async getAll(userId: string) {
+    const { data, error } = await supabase
+      .from('automations')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false });
+    
+    if (error) throw error;
+    return data;
+  }
+
+  async getById(id: string) {
+    const { data, error } = await supabase
+      .from('automations')
+      .select('*')
+      .eq('id', id)
+      .single();
+    
+    if (error) throw error;
+    return data;
+  }
+
+  async create(userId: string, automation: any) {
+    const { data, error } = await supabase
+      .from('automations')
+      .insert([{
+        user_id: userId,
+        ...automation,
+      }])
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return data;
+  }
+
+  async update(id: string, updates: any) {
+    const { data, error } = await supabase
+      .from('automations')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return data;
+  }
+
+  async delete(id: string) {
+    const { error } = await supabase
+      .from('automations')
+      .delete()
+      .eq('id', id);
+    
+    if (error) throw error;
+  }
+
+  async getByType(userId: string, type: string) {
+    const { data, error } = await supabase
+      .from('automations')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('type', type)
+      .order('created_at', { ascending: false });
+    
+    if (error) throw error;
+    return data;
+  }
+}
+
+// Settings Service
+export class SettingsService {
+  async get(userId: string) {
+    const { data, error } = await supabase
+      .from('settings')
+      .select('*')
+      .eq('user_id', userId)
+      .single();
+    
+    if (error && error.code !== 'PGRST116') throw error;
+    return data;
+  }
+
+  async createOrUpdate(userId: string, settings: any) {
+    // Check if settings exist
+    const existing = await this.get(userId);
+    
+    if (existing) {
+      const { data, error } = await supabase
+        .from('settings')
+        .update(settings)
+        .eq('user_id', userId)
+        .select()
+        .single();
+      
+      if (error) throw error;
+      return data;
+    } else {
+      const { data, error } = await supabase
+        .from('settings')
+        .insert([{
+          user_id: userId,
+          ...settings,
+        }])
+        .select()
+        .single();
+      
+      if (error) throw error;
+      return data;
+    }
+  }
+}
+
+// Analytics Service (uses existing data)
+export class AnalyticsService {
+  async getStats(userId: string) {
+    const now = new Date();
+    const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0);
+
+    // Get current month revenue from invoices
+    const { data: currentInvoices, error: invoicesError } = await supabase
+      .from('invoices')
+      .select('total, status, currency, date')
+      .eq('user_id', userId)
+      .gte('date', currentMonthStart.toISOString().split('T')[0]);
+    
+    if (invoicesError) throw invoicesError;
+
+    // Get last month revenue
+    const { data: lastMonthInvoices, error: lastMonthInvoicesError } = await supabase
+      .from('invoices')
+      .select('total, status, currency')
+      .eq('user_id', userId)
+      .gte('date', lastMonthStart.toISOString().split('T')[0])
+      .lt('date', currentMonthStart.toISOString().split('T')[0]);
+    
+    if (lastMonthInvoicesError) throw lastMonthInvoicesError;
+
+    // Calculate current month revenue
+    const currentRevenue = currentInvoices?.reduce((sum, inv) => {
+      if (inv.status === 'paid') {
+        return sum + (parseFloat(inv.total) || 0);
+      }
+      return sum;
+    }, 0) || 0;
+
+    // Calculate last month revenue
+    const lastMonthRevenue = lastMonthInvoices?.reduce((sum, inv) => {
+      if (inv.status === 'paid') {
+        return sum + (parseFloat(inv.total) || 0);
+      }
+      return sum;
+    }, 0) || 0;
+
+    // Calculate revenue growth
+    const revenueGrowth = lastMonthRevenue > 0 
+      ? (((currentRevenue - lastMonthRevenue) / lastMonthRevenue) * 100).toFixed(1)
+      : currentRevenue > 0 ? '100.0' : '0.0';
+
+    // Get current month client count
+    const { count: currentClientCount, error: clientsError } = await supabase
+      .from('clients')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', userId)
+      .gte('created_at', currentMonthStart.toISOString());
+    
+    if (clientsError) throw clientsError;
+
+    // Get last month client count
+    const { count: lastMonthClientCount } = await supabase
+      .from('clients')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', userId)
+      .gte('created_at', lastMonthStart.toISOString())
+      .lt('created_at', currentMonthStart.toISOString());
+
+    // Calculate client growth
+    const clientGrowth = (lastMonthClientCount || 0) > 0
+      ? ((((currentClientCount || 0) - (lastMonthClientCount || 0)) / (lastMonthClientCount || 0)) * 100).toFixed(1)
+      : (currentClientCount || 0) > 0 ? '100.0' : '0.0';
+
+    // Get total client count (all time)
+    const { count: totalClientCount } = await supabase
+      .from('clients')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', userId);
+
+    // Get current month invoice count
+    const { count: currentInvoiceCount, error: invoiceCountError } = await supabase
+      .from('invoices')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', userId)
+      .gte('date', currentMonthStart.toISOString().split('T')[0]);
+    
+    if (invoiceCountError) throw invoiceCountError;
+
+    // Get last month invoice count
+    const { count: lastMonthInvoiceCount } = await supabase
+      .from('invoices')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', userId)
+      .gte('date', lastMonthStart.toISOString().split('T')[0])
+      .lt('date', currentMonthStart.toISOString().split('T')[0]);
+
+    // Calculate invoice growth
+    const invoiceGrowth = (lastMonthInvoiceCount || 0) > 0
+      ? ((((currentInvoiceCount || 0) - (lastMonthInvoiceCount || 0)) / (lastMonthInvoiceCount || 0)) * 100).toFixed(1)
+      : (currentInvoiceCount || 0) > 0 ? '100.0' : '0.0';
+
+    // Get total invoice count (all time)
+    const { count: totalInvoiceCount } = await supabase
+      .from('invoices')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', userId);
+
+    // Get payment methods distribution
+    const { data: payments, error: paymentsError } = await supabase
+      .from('payments')
+      .select('method, amount, created_at')
+      .eq('user_id', userId)
+      .eq('status', 'completed');
+    
+    if (paymentsError) throw paymentsError;
+
+    const paymentMethods: Record<string, number> = {};
+    const totalPaid = payments?.reduce((sum, p) => {
+      paymentMethods[p.method] = (paymentMethods[p.method] || 0) + (parseFloat(p.amount) || 0);
+      return sum + (parseFloat(p.amount) || 0);
+    }, 0) || 0;
+
+    // Calculate current month collection rate
+    const currentMonthTotalPaid = payments?.filter(p => {
+      const paymentDate = new Date(p.created_at || '');
+      return paymentDate >= currentMonthStart;
+    }).reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0) || 0;
+
+    const currentMonthInvoiceAmount = currentInvoices?.reduce((sum, inv) => sum + (parseFloat(inv.total) || 0), 0) || 0;
+    const currentCollectionRate = currentMonthInvoiceAmount > 0 ? ((currentMonthTotalPaid / currentMonthInvoiceAmount) * 100) : 0;
+
+    // Get last month payments
+    const { data: lastMonthPayments, error: lastMonthPaymentsError } = await supabase
+      .from('payments')
+      .select('amount')
+      .eq('user_id', userId)
+      .eq('status', 'completed')
+      .gte('created_at', lastMonthStart.toISOString())
+      .lt('created_at', currentMonthStart.toISOString());
+    
+    const lastMonthTotalPaid = lastMonthPayments?.reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0) || 0;
+
+    const lastMonthInvoiceAmount = lastMonthInvoices?.reduce((sum, inv) => sum + (parseFloat(inv.total) || 0), 0) || 0;
+    const lastMonthCollectionRate = lastMonthInvoiceAmount > 0 ? ((lastMonthTotalPaid / lastMonthInvoiceAmount) * 100) : 0;
+
+    // Calculate collection rate growth
+    const collectionRateGrowth = lastMonthCollectionRate > 0
+      ? ((currentCollectionRate - lastMonthCollectionRate)).toFixed(1)
+      : currentCollectionRate > 0 ? currentCollectionRate.toFixed(1) : '0.0';
+
+    // Get top clients
+    const { data: topClients, error: topClientsError } = await supabase
+      .from('invoices')
+      .select('client_id, total, clients:client_id(name)')
+      .eq('user_id', userId)
+      .eq('status', 'paid');
+    
+    if (topClientsError) throw topClientsError;
+
+    const clientRevenue: Record<string, { name: string; revenue: number; invoices: number }> = {};
+    topClients?.forEach((inv: any) => {
+      const clientId = inv.client_id;
+      if (!clientRevenue[clientId]) {
+        clientRevenue[clientId] = {
+          name: inv.clients?.name || 'Unknown',
+          revenue: 0,
+          invoices: 0,
+        };
+      }
+      clientRevenue[clientId].revenue += parseFloat(inv.total) || 0;
+      clientRevenue[clientId].invoices += 1;
+    });
+
+    const topClientsList = Object.values(clientRevenue)
+      .sort((a, b) => b.revenue - a.revenue)
+      .slice(0, 5);
+
+    return {
+      totalRevenue: currentRevenue,
+      totalClients: totalClientCount || 0,
+      totalInvoices: totalInvoiceCount || 0,
+      collectionRate: currentCollectionRate.toFixed(1),
+      paymentMethods,
+      topClients: topClientsList,
+      growth: {
+        revenue: parseFloat(revenueGrowth),
+        clients: parseFloat(clientGrowth),
+        invoices: parseFloat(invoiceGrowth),
+        collectionRate: parseFloat(collectionRateGrowth),
+      }
+    };
+  }
+
+  async getRevenueTrend(userId: string, period: 'week' | 'month' | 'quarter' | 'year' = 'month') {
+    const now = new Date();
+    let startDate = new Date();
+    
+    switch (period) {
+      case 'week':
+        startDate.setDate(now.getDate() - 7);
+        break;
+      case 'month':
+        startDate.setMonth(now.getMonth() - 1);
+        break;
+      case 'quarter':
+        startDate.setMonth(now.getMonth() - 3);
+        break;
+      case 'year':
+        startDate.setFullYear(now.getFullYear() - 1);
+        break;
+    }
+
+    const { data, error } = await supabase
+      .from('invoices')
+      .select('date, total, status')
+      .eq('user_id', userId)
+      .eq('status', 'paid')
+      .gte('date', startDate.toISOString().split('T')[0])
+      .order('date', { ascending: true });
+    
+    if (error) throw error;
+    return data || [];
+  }
+}
+
 export const clientsService = new ClientsService();
 export const productsService = new ProductsService();
 export const quotationsService = new QuotationsService();
 export const invoicesService = new InvoicesService();
 export const paymentsService = new PaymentsService();
 export const dashboardService = new DashboardService();
+export const templatesService = new TemplatesService();
+export const automationsService = new AutomationsService();
+export const settingsService = new SettingsService();
+export const analyticsService = new AnalyticsService();
+
 

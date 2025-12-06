@@ -47,6 +47,7 @@ export interface QuotationItem {
 export interface Quotation {
   id: string;
   quotationNumber: string;
+  referenceNumber?: string;
   clientId: string;
   clientName: string;
   date: string;
@@ -56,6 +57,7 @@ export interface Quotation {
   subtotal: number;
   taxAmount: number;
   discountAmount: number;
+  shippingCharges?: number;
   total: number;
   currency: string;
   notes?: string;

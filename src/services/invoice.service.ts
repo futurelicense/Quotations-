@@ -26,6 +26,36 @@ export interface UpdateInvoiceData extends Partial<CreateInvoiceData> {
 }
 
 class InvoiceService {
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    
   async getInvoices(params?: {
     page?: number;
     limit?: number;
@@ -88,4 +118,5 @@ class InvoiceService {
 }
 
 export const invoiceService = new InvoiceService();
+
 

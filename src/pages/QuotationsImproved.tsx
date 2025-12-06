@@ -316,7 +316,7 @@ export function Quotations() {
         )}
       </div>
 
-      {/* Inline Quotation Form - Same Page, Not Modal */}
+      {/* Inline Quotation Form */}
       {showForm && (
         <Card>
           <div className="p-6">
@@ -395,13 +395,10 @@ export function Quotations() {
                 />
               </div>
 
-              {/* Line Items - Manual entry (no product selector), multiple items allowed */}
+              {/* Line Items */}
               <div className="border-t pt-6">
                 <div className="flex items-center justify-between mb-4">
-                  <div>
-                    <h3 className="text-lg font-semibold text-gray-900">Line Items</h3>
-                    <p className="text-sm text-gray-500 mt-1">Enter product or service details manually</p>
-                  </div>
+                  <h3 className="text-lg font-semibold text-gray-900">Line Items</h3>
                   <Button type="button" size="sm" onClick={addLineItem} icon={<PlusIcon className="w-4 h-4" />}>
                     Add Line Item
                   </Button>
@@ -423,6 +420,7 @@ export function Quotations() {
                           </Button>
                         )}
                       </div>
+
                       <div className="space-y-3">
                         <Textarea
                           label="Description"
@@ -602,3 +600,5 @@ export function Quotations() {
     </div>
   );
 }
+
+

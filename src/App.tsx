@@ -10,7 +10,7 @@ import { Register } from './pages/Register';
 import { Dashboard } from './pages/Dashboard';
 import { Clients } from './pages/Clients';
 import { Products } from './pages/Products';
-import { Quotations } from './pages/QuotationsFunctional';
+import { Quotations } from './pages/Quotations';
 import { Invoices } from './pages/InvoicesFunctional';
 import { Payments } from './pages/PaymentsFunctional';
 import { Templates } from './pages/Templates';

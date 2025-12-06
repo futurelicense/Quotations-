@@ -10,7 +10,7 @@ import { Badge } from '../components/ui/Badge';
 import { EmptyState } from '../components/ui/EmptyState';
 import { useToast } from '../components/ui/Toast';
 import { useAuth } from '../contexts/AuthContext';
-import { invoicesService, clientsService, productsService } from '../services/supabase-client.service';
+import { invoicesService, clientsService } from '../services/supabase-client.service';
 import { generateInvoiceNumber } from '../utils/generators';
 import { PlusIcon, SearchIcon, ReceiptIcon, EditIcon, TrashIcon, CheckCircleIcon } from 'lucide-react';
 
@@ -35,14 +35,19 @@ const initialFormData: InvoiceFormData = {
 export function Invoices() {
   const [invoices, setInvoices] = useState<any[]>([]);
   const [clients, setClients] = useState<any[]>([]);
-  const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState<any>(null);
   const [editingInvoice, setEditingInvoice] = useState<any>(null);
   const [formData, setFormData] = useState<InvoiceFormData>(initialFormData);
-  const [lineItems, setLineItems] = useState<any[]>([]);
+  const [lineItems, setLineItems] = useState<any[]>([{
+    description: '',
+    quantity: 1,
+    unit_price: 0,
+    tax_rate: 0,
+    discount: 0,
+  }]);
   const [paymentAmount, setPaymentAmount] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -59,14 +64,12 @@ export function Invoices() {
   const loadData = async () => {
     try {
       setLoading(true);
-      const [invoicesData, clientsData, productsData] = await Promise.all([
+      const [invoicesData, clientsData] = await Promise.all([
         invoicesService.getAll(user!.id),
         clientsService.getAll(user!.id),
-        productsService.getAll(user!.id),
       ]);
       setInvoices(invoicesData || []);
       setClients(clientsData || []);
-      setProducts(productsData || []);
     } catch (error: any) {
       toast.error(error.message || 'Failed to load data');
     } finally {
@@ -74,10 +77,20 @@ export function Invoices() {
     }
   };
 
+  const calculateLineItemTotal = (item: any) => {
+    const baseAmount = item.quantity * item.unit_price;
+    const afterDiscount = baseAmount * (1 - item.discount / 100);
+    const withTax = afterDiscount * (1 + item.tax_rate / 100);
+    return withTax;
+  };
+
   const calculateTotal = () => {
     const subtotal = lineItems.reduce((sum, item) => {
-      const itemTotal = item.quantity * item.unit_price * (1 - item.discount / 100);
-      return sum + itemTotal;
+      return sum + (item.quantity * item.unit_price * (1 - item.discount / 100));
+    }, 0);
+    
+    const discountAmount = lineItems.reduce((sum, item) => {
+      return sum + (item.quantity * item.unit_price * (item.discount / 100));
     }, 0);
     
     const taxAmount = lineItems.reduce((sum, item) => {
@@ -85,14 +98,14 @@ export function Invoices() {
       return sum + (itemTotal * item.tax_rate / 100);
     }, 0);
     
-    return { subtotal, taxAmount, total: subtotal + taxAmount };
+    return { subtotal, discountAmount, taxAmount, total: subtotal + taxAmount };
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (lineItems.length === 0) {
-      toast.error('Please add at least one line item');
+    if (lineItems.length === 0 || !lineItems[0].description) {
+      toast.error('Please add at least one line item with description');
       return;
     }
 
@@ -124,7 +137,13 @@ export function Invoices() {
       setIsModalOpen(false);
       setEditingInvoice(null);
       setFormData(initialFormData);
-      setLineItems([]);
+      setLineItems([{
+        description: '',
+        quantity: 1,
+        unit_price: 0,
+        tax_rate: 0,
+        discount: 0,
+      }]);
       loadData();
     } catch (error: any) {
       toast.error(error.message || 'Failed to save invoice');
@@ -167,8 +186,6 @@ export function Invoices() {
 
   const addLineItem = () => {
     setLineItems([...lineItems, {
-      product_id: '',
-      product_name: '',
       description: '',
       quantity: 1,
       unit_price: 0,
@@ -180,17 +197,6 @@ export function Invoices() {
   const updateLineItem = (index: number, field: string, value: any) => {
     const updated = [...lineItems];
     updated[index] = { ...updated[index], [field]: value };
-    
-    if (field === 'product_id' && value) {
-      const product = products.find(p => p.id === value);
-      if (product) {
-        updated[index].product_name = product.name;
-        updated[index].description = product.description;
-        updated[index].unit_price = product.price;
-        updated[index].tax_rate = product.tax_rate;
-      }
-    }
-    
     setLineItems(updated);
   };
 
@@ -294,7 +300,13 @@ export function Invoices() {
           onClick={() => {
             setEditingInvoice(null);
             setFormData(initialFormData);
-            setLineItems([]);
+            setLineItems([{
+              description: '',
+              quantity: 1,
+              unit_price: 0,
+              tax_rate: 0,
+              discount: 0,
+            }]);
             setIsModalOpen(true);
           }}
           icon={<PlusIcon className="w-4 h-4" />}
@@ -342,7 +354,13 @@ export function Invoices() {
           setIsModalOpen(false);
           setEditingInvoice(null);
           setFormData(initialFormData);
-          setLineItems([]);
+          setLineItems([{
+            description: '',
+            quantity: 1,
+            unit_price: 0,
+            tax_rate: 0,
+            discount: 0,
+          }]);
         }}
         title={editingInvoice ? 'Edit Invoice' : 'New Invoice'}
       >
@@ -391,7 +409,7 @@ export function Invoices() {
             <div className="flex items-center justify-between mb-3">
               <h3 className="font-medium text-gray-900">Line Items</h3>
               <Button type="button" size="sm" onClick={addLineItem}>
-                <PlusIcon className="w-4 h-4" /> Add Item
+                <PlusIcon className="w-4 h-4" /> Add Line Item
               </Button>
             </div>
 
@@ -399,40 +417,63 @@ export function Invoices() {
               <div key={index} className="border border-gray-200 rounded-lg p-4 mb-3 space-y-3">
                 <div className="flex justify-between items-start">
                   <h4 className="text-sm font-medium text-gray-700">Item {index + 1}</h4>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    onClick={() => removeLineItem(index)}
-                  >
-                    Remove
-                  </Button>
+                  {lineItems.length > 1 && (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={() => removeLineItem(index)}
+                    >
+                      Remove
+                    </Button>
+                  )}
                 </div>
 
-                <Select
-                  label="Product/Service"
-                  value={item.product_id}
-                  onChange={(e) => updateLineItem(index, 'product_id', e.target.value)}
-                  options={[
-                    { value: '', label: 'Select product' },
-                    ...products.map(p => ({ value: p.id, label: p.name }))
-                  ]}
+                <Textarea
+                  label="Description"
+                  required
+                  value={item.description}
+                  onChange={(e) => updateLineItem(index, 'description', e.target.value)}
+                  placeholder="Enter item description (e.g., Website Development)"
+                  rows={2}
                 />
 
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
                   <Input
                     label="Quantity"
                     type="number"
                     min="1"
+                    step="1"
+                    required
                     value={item.quantity}
                     onChange={(e) => updateLineItem(index, 'quantity', parseInt(e.target.value) || 1)}
                   />
                   <Input
                     label="Unit Price"
                     type="number"
+                    min="0"
                     step="0.01"
+                    required
                     value={item.unit_price}
                     onChange={(e) => updateLineItem(index, 'unit_price', parseFloat(e.target.value) || 0)}
+                  />
+                  <Input
+                    label="Tax %"
+                    type="number"
+                    min="0"
+                    max="100"
+                    step="0.01"
+                    value={item.tax_rate}
+                    onChange={(e) => updateLineItem(index, 'tax_rate', parseFloat(e.target.value) || 0)}
+                  />
+                  <Input
+                    label="Discount %"
+                    type="number"
+                    min="0"
+                    max="100"
+                    step="0.01"
+                    value={item.discount}
+                    onChange={(e) => updateLineItem(index, 'discount', parseFloat(e.target.value) || 0)}
                   />
                 </div>
               </div>
@@ -440,11 +481,34 @@ export function Invoices() {
           </div>
 
           {lineItems.length > 0 && (
-            <div className="bg-gray-50 p-4 rounded-lg">
-              <div className="text-right">
-                <p className="text-lg font-bold text-gray-900">
-                  Total: {formData.currency} {calculateTotal().total.toFixed(2)}
-                </p>
+            <div className="bg-gray-50 p-4 rounded-lg space-y-2">
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-600">Subtotal:</span>
+                <span className="font-medium text-gray-900">
+                  {formData.currency} {calculateTotal().subtotal.toFixed(2)}
+                </span>
+              </div>
+              {calculateTotal().discountAmount > 0 && (
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-600">Discount:</span>
+                  <span className="font-medium text-gray-900">
+                    -{formData.currency} {calculateTotal().discountAmount.toFixed(2)}
+                  </span>
+                </div>
+              )}
+              {calculateTotal().taxAmount > 0 && (
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-600">Tax:</span>
+                  <span className="font-medium text-gray-900">
+                    {formData.currency} {calculateTotal().taxAmount.toFixed(2)}
+                  </span>
+                </div>
+              )}
+              <div className="flex justify-between text-lg font-bold pt-2 border-t border-gray-200">
+                <span className="text-gray-900">Total:</span>
+                <span className="text-primary-400">
+                  {formData.currency} {calculateTotal().total.toFixed(2)}
+                </span>
               </div>
             </div>
           )}
@@ -518,4 +582,5 @@ export function Invoices() {
     </div>
   );
 }
+
 

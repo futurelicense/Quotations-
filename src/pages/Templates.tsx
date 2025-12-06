@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
@@ -7,12 +7,20 @@ import { Badge } from '../components/ui/Badge';
 import { EmptyState } from '../components/ui/EmptyState';
 import { Modal } from '../components/ui/Modal';
 import { Textarea } from '../components/ui/Textarea';
-import { PlusIcon, SearchIcon, FileIcon, EyeIcon, CopyIcon, TrashIcon } from 'lucide-react';
+import { useToast } from '../components/ui/Toast';
+import { useAuth } from '../contexts/AuthContext';
+import { templatesService } from '../services/supabase-client.service';
+import { PlusIcon, SearchIcon, FileIcon, EyeIcon, CopyIcon, TrashIcon, EditIcon, SaveIcon } from 'lucide-react';
+
 export function Templates() {
   const [searchQuery, setSearchQuery] = useState('');
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [templates, setTemplates] = useState<any[]>([]);
   const [selectedTemplate, setSelectedTemplate] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     type: 'invoice',
@@ -25,33 +33,178 @@ export function Templates() {
     primaryColor: '#41BAC4',
     fontFamily: 'Inter'
   });
-  const templates = [{
-    id: '1',
-    name: 'Modern Professional',
-    type: 'invoice',
-    isDefault: true,
-    preview: 'Clean and professional design with company branding',
-    createdAt: '2024-01-10'
-  }, {
-    id: '2',
-    name: 'Minimal Quote',
-    type: 'quotation',
-    isDefault: true,
-    preview: 'Simple quotation template with essential details',
-    createdAt: '2024-01-10'
-  }, {
-    id: '3',
-    name: 'Detailed Invoice',
-    type: 'invoice',
-    isDefault: false,
-    preview: 'Comprehensive invoice with itemized breakdown',
-    createdAt: '2024-01-12'
-  }];
-  const handleCreateTemplate = () => {
-    console.log('Creating template:', formData);
-    setIsCreateModalOpen(false);
-    alert('Template created successfully!');
-    // Reset form
+
+  const { user } = useAuth();
+  const toast = useToast();
+
+  useEffect(() => {
+    if (user) {
+      loadTemplates();
+    }
+  }, [user]);
+
+  const loadTemplates = async () => {
+    try {
+      setLoading(true);
+      const data = await templatesService.getAll(user!.id);
+      setTemplates(data || []);
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to load templates');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCreateTemplate = async () => {
+    if (!formData.name.trim()) {
+      toast.error('Please enter a template name');
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const templateData = {
+        name: formData.name,
+        type: formData.type,
+        is_default: false,
+        layout: JSON.stringify({
+          headerText: formData.headerText,
+          companyName: formData.companyName,
+          companyAddress: formData.companyAddress,
+          companyPhone: formData.companyPhone,
+          companyEmail: formData.companyEmail,
+          footerText: formData.footerText,
+          primaryColor: formData.primaryColor,
+          fontFamily: formData.fontFamily,
+        }),
+        header_text: formData.headerText,
+        company_name: formData.companyName,
+        company_address: formData.companyAddress,
+        company_phone: formData.companyPhone,
+        company_email: formData.companyEmail,
+        footer_text: formData.footerText,
+        primary_color: formData.primaryColor,
+        font_family: formData.fontFamily,
+      };
+
+      await templatesService.create(user!.id, templateData);
+      toast.success('Template created successfully!');
+      setIsCreateModalOpen(false);
+      resetForm();
+      loadTemplates();
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to create template');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleUpdateTemplate = async () => {
+    if (!selectedTemplate) return;
+
+    setSubmitting(true);
+    try {
+      const templateData = {
+        name: formData.name,
+        type: formData.type,
+        layout: JSON.stringify({
+          headerText: formData.headerText,
+          companyName: formData.companyName,
+          companyAddress: formData.companyAddress,
+          companyPhone: formData.companyPhone,
+          companyEmail: formData.companyEmail,
+          footerText: formData.footerText,
+          primaryColor: formData.primaryColor,
+          fontFamily: formData.fontFamily,
+        }),
+        header_text: formData.headerText,
+        company_name: formData.companyName,
+        company_address: formData.companyAddress,
+        company_phone: formData.companyPhone,
+        company_email: formData.companyEmail,
+        footer_text: formData.footerText,
+        primary_color: formData.primaryColor,
+        font_family: formData.fontFamily,
+      };
+
+      await templatesService.update(selectedTemplate.id, templateData);
+      toast.success('Template updated successfully!');
+      setIsEditModalOpen(false);
+      setSelectedTemplate(null);
+      resetForm();
+      loadTemplates();
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to update template');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this template?')) return;
+
+    try {
+      await templatesService.delete(id);
+      toast.success('Template deleted successfully');
+      loadTemplates();
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to delete template');
+    }
+  };
+
+  const handleDuplicate = async (template: any) => {
+    try {
+      const templateData = {
+        name: `${template.name} (Copy)`,
+        type: template.type,
+        is_default: false,
+        layout: template.layout,
+        header_text: template.header_text,
+        company_name: template.company_name,
+        company_address: template.company_address,
+        company_phone: template.company_phone,
+        company_email: template.company_email,
+        footer_text: template.footer_text,
+        primary_color: template.primary_color,
+        font_family: template.font_family,
+      };
+
+      await templatesService.create(user!.id, templateData);
+      toast.success('Template duplicated successfully');
+      loadTemplates();
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to duplicate template');
+    }
+  };
+
+  const handleEdit = (template: any) => {
+    setSelectedTemplate(template);
+    setFormData({
+      name: template.name,
+      type: template.type,
+      headerText: template.header_text || 'INVOICE',
+      companyName: template.company_name || 'Your Company Name',
+      companyAddress: template.company_address || '123 Business Street',
+      companyPhone: template.company_phone || '+1 234 567 8900',
+      companyEmail: template.company_email || 'contact@company.com',
+      footerText: template.footer_text || 'Thank you for your business!',
+      primaryColor: template.primary_color || '#41BAC4',
+      fontFamily: template.font_family || 'Inter'
+    });
+    setIsEditModalOpen(true);
+  };
+
+  const handleSetDefault = async (templateId: string, type: string) => {
+    try {
+      await templatesService.setDefault(user!.id, templateId, type);
+      toast.success('Default template updated');
+      loadTemplates();
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to set default template');
+    }
+  };
+
+  const resetForm = () => {
     setFormData({
       name: '',
       type: 'invoice',
@@ -65,21 +218,28 @@ export function Templates() {
       fontFamily: 'Inter'
     });
   };
+
   const handlePreview = (template: any) => {
     setSelectedTemplate(template);
     setIsPreviewModalOpen(true);
   };
-  return <div className="space-y-6">
+
+  const filteredTemplates = templates.filter(t =>
+    t.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    t.type?.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  return (
+    <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">
-            Document Templates
-          </h1>
-          <p className="text-gray-500 mt-1">
-            Manage templates for quotations and invoices
-          </p>
+          <h1 className="text-2xl font-bold text-gray-900">Document Templates</h1>
+          <p className="text-gray-500 mt-1">Manage templates for quotations and invoices</p>
         </div>
-        <Button icon={<PlusIcon className="w-4 h-4" />} onClick={() => setIsCreateModalOpen(true)}>
+        <Button icon={<PlusIcon className="w-4 h-4" />} onClick={() => {
+          resetForm();
+          setIsCreateModalOpen(true);
+        }}>
           Create Template
         </Button>
       </div>
@@ -89,7 +249,7 @@ export function Templates() {
           <div className="flex items-start justify-between">
             <div>
               <p className="text-sm text-gray-500 mb-1">Total Templates</p>
-              <p className="text-2xl font-bold text-gray-900">12</p>
+              <p className="text-2xl font-bold text-gray-900">{templates.length}</p>
             </div>
             <div className="p-3 bg-primary-50 rounded-lg text-primary-400">
               <FileIcon className="w-6 h-6" />
@@ -100,7 +260,7 @@ export function Templates() {
           <div className="flex items-start justify-between">
             <div>
               <p className="text-sm text-gray-500 mb-1">Active Templates</p>
-              <p className="text-2xl font-bold text-gray-900">8</p>
+              <p className="text-2xl font-bold text-gray-900">{templates.filter(t => t.is_default).length}</p>
             </div>
             <div className="p-3 bg-green-50 rounded-lg text-green-500">
               <FileIcon className="w-6 h-6" />
@@ -111,161 +271,375 @@ export function Templates() {
 
       <Card padding="none">
         <div className="p-4 border-b border-gray-200">
-          <Input placeholder="Search templates by name or type..." icon={<SearchIcon className="w-4 h-4" />} value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
+          <Input
+            placeholder="Search templates by name or type..."
+            icon={<SearchIcon className="w-4 h-4" />}
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+          />
         </div>
 
-        {templates.length === 0 ? <EmptyState icon={<FileIcon className="w-8 h-8" />} title="No templates yet" description="Create your first document template for quotations or invoices" action={{
-        label: 'Create Template',
-        onClick: () => setIsCreateModalOpen(true)
-      }} /> : <div className="p-6">
+        {loading ? (
+          <div className="p-8 text-center">
+            <p className="text-gray-500">Loading templates...</p>
+          </div>
+        ) : filteredTemplates.length === 0 ? (
+          <EmptyState
+            icon={<FileIcon className="w-8 h-8" />}
+            title="No templates yet"
+            description="Create your first document template for quotations or invoices"
+            action={{
+              label: 'Create Template',
+              onClick: () => setIsCreateModalOpen(true)
+            }}
+          />
+        ) : (
+          <div className="p-6">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {templates.map(template => <Card key={template.id} padding="none" className="overflow-hidden">
+              {filteredTemplates.map(template => (
+                <Card key={template.id} padding="none" className="overflow-hidden">
                   <div className="h-48 bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center relative">
                     <FileIcon className="w-16 h-16 text-gray-400" />
                     <div className="absolute top-3 right-3">
-                      {template.isDefault && <Badge variant="success" size="sm">
-                          Default
-                        </Badge>}
+                      {template.is_default && (
+                        <Badge variant="success" size="sm">Default</Badge>
+                      )}
                     </div>
                   </div>
                   <div className="p-4">
                     <div className="mb-2">
-                      <h3 className="font-semibold text-gray-900">
-                        {template.name}
-                      </h3>
-                      <p className="text-sm text-gray-500 mt-1">
-                        {template.preview}
-                      </p>
+                      <h3 className="font-semibold text-gray-900">{template.name}</h3>
+                      <p className="text-sm text-gray-500 mt-1">Template for {template.type}</p>
                     </div>
                     <div className="flex items-center gap-2 mt-4">
-                      <Badge variant="info" size="sm">
-                        {template.type}
-                      </Badge>
+                      <Badge variant="info" size="sm">{template.type}</Badge>
                     </div>
                     <div className="flex items-center gap-2 mt-4">
-                      <Button size="sm" variant="outline" icon={<EyeIcon className="w-3 h-3" />} fullWidth onClick={() => handlePreview(template)}>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        icon={<EyeIcon className="w-3 h-3" />}
+                        fullWidth
+                        onClick={() => handlePreview(template)}
+                      >
                         Preview
                       </Button>
-                      <Button size="sm" variant="ghost" icon={<CopyIcon className="w-3 h-3" />}>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        icon={<EditIcon className="w-3 h-3" />}
+                        onClick={() => handleEdit(template)}
+                      >
+                        Edit
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        icon={<CopyIcon className="w-3 h-3" />}
+                        onClick={() => handleDuplicate(template)}
+                      >
                         Duplicate
                       </Button>
-                      <Button size="sm" variant="ghost" icon={<TrashIcon className="w-3 h-3" />}>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        icon={<TrashIcon className="w-3 h-3" />}
+                        onClick={() => handleDelete(template.id)}
+                      >
                         Delete
                       </Button>
                     </div>
+                    {!template.is_default && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        fullWidth
+                        className="mt-2"
+                        onClick={() => handleSetDefault(template.id, template.type)}
+                      >
+                        Set as Default
+                      </Button>
+                    )}
                   </div>
-                </Card>)}
+                </Card>
+              ))}
             </div>
-          </div>}
+          </div>
+        )}
       </Card>
 
       {/* Create Template Modal */}
-      <Modal isOpen={isCreateModalOpen} onClose={() => setIsCreateModalOpen(false)} title="Create New Template" size="lg" footer={<>
-            <Button variant="ghost" onClick={() => setIsCreateModalOpen(false)}>
+      <Modal
+        isOpen={isCreateModalOpen}
+        onClose={() => {
+          setIsCreateModalOpen(false);
+          resetForm();
+        }}
+        title="Create New Template"
+        size="lg"
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => {
+              setIsCreateModalOpen(false);
+              resetForm();
+            }}>
               Cancel
             </Button>
-            <Button onClick={handleCreateTemplate}>Create Template</Button>
-          </>}>
+            <Button onClick={handleCreateTemplate} disabled={submitting} icon={<SaveIcon className="w-4 h-4" />}>
+              {submitting ? 'Creating...' : 'Create Template'}
+            </Button>
+          </>
+        }
+      >
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
-            <Input label="Template Name" placeholder="Modern Professional" value={formData.name} onChange={e => setFormData({
-            ...formData,
-            name: e.target.value
-          })} />
-            <Select label="Type" options={[{
-            value: 'invoice',
-            label: 'Invoice'
-          }, {
-            value: 'quotation',
-            label: 'Quotation'
-          }]} value={formData.type} onChange={e => setFormData({
-            ...formData,
-            type: e.target.value
-          })} />
+            <Input
+              label="Template Name"
+              placeholder="Modern Professional"
+              value={formData.name}
+              onChange={e => setFormData({ ...formData, name: e.target.value })}
+            />
+            <Select
+              label="Type"
+              options={[
+                { value: 'invoice', label: 'Invoice' },
+                { value: 'quotation', label: 'Quotation' }
+              ]}
+              value={formData.type}
+              onChange={e => setFormData({ ...formData, type: e.target.value })}
+            />
           </div>
 
           <div className="border-t border-gray-200 pt-4">
-            <h3 className="font-semibold text-gray-900 mb-3">
-              Company Information
-            </h3>
+            <h3 className="font-semibold text-gray-900 mb-3">Company Information</h3>
             <div className="space-y-3">
-              <Input label="Company Name" placeholder="Your Company Inc" value={formData.companyName} onChange={e => setFormData({
-              ...formData,
-              companyName: e.target.value
-            })} />
-              <Textarea label="Company Address" placeholder="123 Business Street, City, Country" rows={2} value={formData.companyAddress} onChange={e => setFormData({
-              ...formData,
-              companyAddress: e.target.value
-            })} />
+              <Input
+                label="Company Name"
+                placeholder="Your Company Inc"
+                value={formData.companyName}
+                onChange={e => setFormData({ ...formData, companyName: e.target.value })}
+              />
+              <Textarea
+                label="Company Address"
+                placeholder="123 Business Street, City, Country"
+                rows={2}
+                value={formData.companyAddress}
+                onChange={e => setFormData({ ...formData, companyAddress: e.target.value })}
+              />
               <div className="grid grid-cols-2 gap-3">
-                <Input label="Phone" placeholder="+1 234 567 8900" value={formData.companyPhone} onChange={e => setFormData({
-                ...formData,
-                companyPhone: e.target.value
-              })} />
-                <Input label="Email" type="email" placeholder="contact@company.com" value={formData.companyEmail} onChange={e => setFormData({
-                ...formData,
-                companyEmail: e.target.value
-              })} />
+                <Input
+                  label="Phone"
+                  placeholder="+1 234 567 8900"
+                  value={formData.companyPhone}
+                  onChange={e => setFormData({ ...formData, companyPhone: e.target.value })}
+                />
+                <Input
+                  label="Email"
+                  type="email"
+                  placeholder="contact@company.com"
+                  value={formData.companyEmail}
+                  onChange={e => setFormData({ ...formData, companyEmail: e.target.value })}
+                />
               </div>
             </div>
           </div>
 
           <div className="border-t border-gray-200 pt-4">
-            <h3 className="font-semibold text-gray-900 mb-3">
-              Design Settings
-            </h3>
+            <h3 className="font-semibold text-gray-900 mb-3">Design Settings</h3>
             <div className="space-y-3">
-              <Input label="Header Text" placeholder="INVOICE" value={formData.headerText} onChange={e => setFormData({
-              ...formData,
-              headerText: e.target.value
-            })} />
+              <Input
+                label="Header Text"
+                placeholder="INVOICE"
+                value={formData.headerText}
+                onChange={e => setFormData({ ...formData, headerText: e.target.value })}
+              />
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                    Primary Color
-                  </label>
-                  <input type="color" value={formData.primaryColor} onChange={e => setFormData({
-                  ...formData,
-                  primaryColor: e.target.value
-                })} className="w-full h-10 rounded-lg border border-gray-300 cursor-pointer" />
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Primary Color</label>
+                  <input
+                    type="color"
+                    value={formData.primaryColor}
+                    onChange={e => setFormData({ ...formData, primaryColor: e.target.value })}
+                    className="w-full h-10 rounded-lg border border-gray-300 cursor-pointer"
+                  />
                 </div>
-                <Select label="Font Family" options={[{
-                value: 'Inter',
-                label: 'Inter'
-              }, {
-                value: 'Arial',
-                label: 'Arial'
-              }, {
-                value: 'Helvetica',
-                label: 'Helvetica'
-              }, {
-                value: 'Times New Roman',
-                label: 'Times New Roman'
-              }]} value={formData.fontFamily} onChange={e => setFormData({
-                ...formData,
-                fontFamily: e.target.value
-              })} />
+                <Select
+                  label="Font Family"
+                  options={[
+                    { value: 'Inter', label: 'Inter' },
+                    { value: 'Arial', label: 'Arial' },
+                    { value: 'Helvetica', label: 'Helvetica' },
+                    { value: 'Times New Roman', label: 'Times New Roman' }
+                  ]}
+                  value={formData.fontFamily}
+                  onChange={e => setFormData({ ...formData, fontFamily: e.target.value })}
+                />
               </div>
-              <Textarea label="Footer Text" placeholder="Thank you for your business!" rows={2} value={formData.footerText} onChange={e => setFormData({
-              ...formData,
-              footerText: e.target.value
-            })} />
+              <Textarea
+                label="Footer Text"
+                placeholder="Thank you for your business!"
+                rows={2}
+                value={formData.footerText}
+                onChange={e => setFormData({ ...formData, footerText: e.target.value })}
+              />
+            </div>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Edit Template Modal */}
+      <Modal
+        isOpen={isEditModalOpen}
+        onClose={() => {
+          setIsEditModalOpen(false);
+          setSelectedTemplate(null);
+          resetForm();
+        }}
+        title="Edit Template"
+        size="lg"
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => {
+              setIsEditModalOpen(false);
+              setSelectedTemplate(null);
+              resetForm();
+            }}>
+              Cancel
+            </Button>
+            <Button onClick={handleUpdateTemplate} disabled={submitting} icon={<SaveIcon className="w-4 h-4" />}>
+              {submitting ? 'Updating...' : 'Update Template'}
+            </Button>
+          </>
+        }
+      >
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <Input
+              label="Template Name"
+              placeholder="Modern Professional"
+              value={formData.name}
+              onChange={e => setFormData({ ...formData, name: e.target.value })}
+            />
+            <Select
+              label="Type"
+              options={[
+                { value: 'invoice', label: 'Invoice' },
+                { value: 'quotation', label: 'Quotation' }
+              ]}
+              value={formData.type}
+              onChange={e => setFormData({ ...formData, type: e.target.value })}
+            />
+          </div>
+
+          <div className="border-t border-gray-200 pt-4">
+            <h3 className="font-semibold text-gray-900 mb-3">Company Information</h3>
+            <div className="space-y-3">
+              <Input
+                label="Company Name"
+                placeholder="Your Company Inc"
+                value={formData.companyName}
+                onChange={e => setFormData({ ...formData, companyName: e.target.value })}
+              />
+              <Textarea
+                label="Company Address"
+                placeholder="123 Business Street, City, Country"
+                rows={2}
+                value={formData.companyAddress}
+                onChange={e => setFormData({ ...formData, companyAddress: e.target.value })}
+              />
+              <div className="grid grid-cols-2 gap-3">
+                <Input
+                  label="Phone"
+                  placeholder="+1 234 567 8900"
+                  value={formData.companyPhone}
+                  onChange={e => setFormData({ ...formData, companyPhone: e.target.value })}
+                />
+                <Input
+                  label="Email"
+                  type="email"
+                  placeholder="contact@company.com"
+                  value={formData.companyEmail}
+                  onChange={e => setFormData({ ...formData, companyEmail: e.target.value })}
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="border-t border-gray-200 pt-4">
+            <h3 className="font-semibold text-gray-900 mb-3">Design Settings</h3>
+            <div className="space-y-3">
+              <Input
+                label="Header Text"
+                placeholder="INVOICE"
+                value={formData.headerText}
+                onChange={e => setFormData({ ...formData, headerText: e.target.value })}
+              />
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Primary Color</label>
+                  <input
+                    type="color"
+                    value={formData.primaryColor}
+                    onChange={e => setFormData({ ...formData, primaryColor: e.target.value })}
+                    className="w-full h-10 rounded-lg border border-gray-300 cursor-pointer"
+                  />
+                </div>
+                <Select
+                  label="Font Family"
+                  options={[
+                    { value: 'Inter', label: 'Inter' },
+                    { value: 'Arial', label: 'Arial' },
+                    { value: 'Helvetica', label: 'Helvetica' },
+                    { value: 'Times New Roman', label: 'Times New Roman' }
+                  ]}
+                  value={formData.fontFamily}
+                  onChange={e => setFormData({ ...formData, fontFamily: e.target.value })}
+                />
+              </div>
+              <Textarea
+                label="Footer Text"
+                placeholder="Thank you for your business!"
+                rows={2}
+                value={formData.footerText}
+                onChange={e => setFormData({ ...formData, footerText: e.target.value })}
+              />
             </div>
           </div>
         </div>
       </Modal>
 
       {/* Preview Template Modal */}
-      <Modal isOpen={isPreviewModalOpen} onClose={() => setIsPreviewModalOpen(false)} title={`Preview: ${selectedTemplate?.name}`} size="xl" footer={<>
-            <Button variant="ghost" onClick={() => setIsPreviewModalOpen(false)}>
+      <Modal
+        isOpen={isPreviewModalOpen}
+        onClose={() => {
+          setIsPreviewModalOpen(false);
+          setSelectedTemplate(null);
+        }}
+        title={`Preview: ${selectedTemplate?.name}`}
+        size="xl"
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => {
+              setIsPreviewModalOpen(false);
+              setSelectedTemplate(null);
+            }}>
               Close
             </Button>
-            <Button>Use This Template</Button>
-          </>}>
+            <Button onClick={() => {
+              if (selectedTemplate) {
+                handleSetDefault(selectedTemplate.id, selectedTemplate.type);
+                setIsPreviewModalOpen(false);
+              }
+            }}>
+              Use This Template
+            </Button>
+          </>
+        }
+      >
         <div className="bg-white border border-gray-200 rounded-lg p-8">
           <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold text-primary-400 mb-2">
-              INVOICE
+            <h1 className="text-3xl font-bold text-primary-400 mb-2" style={{ color: selectedTemplate?.primary_color || '#41BAC4' }}>
+              {selectedTemplate?.header_text || 'INVOICE'}
             </h1>
             <p className="text-gray-600">Invoice #INV-2024-001</p>
           </div>
@@ -273,10 +647,9 @@ export function Templates() {
           <div className="grid grid-cols-2 gap-8 mb-8">
             <div>
               <h3 className="font-semibold text-gray-900 mb-2">From:</h3>
-              <p className="text-gray-700 font-medium">Your Company Inc</p>
-              <p className="text-sm text-gray-600">123 Business Street</p>
-              <p className="text-sm text-gray-600">City, Country</p>
-              <p className="text-sm text-gray-600">+1 234 567 8900</p>
+              <p className="text-gray-700 font-medium">{selectedTemplate?.company_name || 'Your Company Inc'}</p>
+              <p className="text-sm text-gray-600">{selectedTemplate?.company_address || '123 Business Street'}</p>
+              <p className="text-sm text-gray-600">{selectedTemplate?.company_phone || '+1 234 567 8900'}</p>
             </div>
             <div>
               <h3 className="font-semibold text-gray-900 mb-2">To:</h3>
@@ -289,34 +662,18 @@ export function Templates() {
           <table className="w-full mb-8">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-4 py-2 text-left text-sm font-semibold text-gray-900">
-                  Description
-                </th>
-                <th className="px-4 py-2 text-right text-sm font-semibold text-gray-900">
-                  Qty
-                </th>
-                <th className="px-4 py-2 text-right text-sm font-semibold text-gray-900">
-                  Price
-                </th>
-                <th className="px-4 py-2 text-right text-sm font-semibold text-gray-900">
-                  Total
-                </th>
+                <th className="px-4 py-2 text-left text-sm font-semibold text-gray-900">Description</th>
+                <th className="px-4 py-2 text-right text-sm font-semibold text-gray-900">Qty</th>
+                <th className="px-4 py-2 text-right text-sm font-semibold text-gray-900">Price</th>
+                <th className="px-4 py-2 text-right text-sm font-semibold text-gray-900">Total</th>
               </tr>
             </thead>
             <tbody>
               <tr className="border-b border-gray-200">
-                <td className="px-4 py-3 text-sm text-gray-700">
-                  Web Development Service
-                </td>
-                <td className="px-4 py-3 text-sm text-gray-700 text-right">
-                  1
-                </td>
-                <td className="px-4 py-3 text-sm text-gray-700 text-right">
-                  ₦5,000
-                </td>
-                <td className="px-4 py-3 text-sm text-gray-900 font-medium text-right">
-                  ₦5,000
-                </td>
+                <td className="px-4 py-3 text-sm text-gray-700">Web Development Service</td>
+                <td className="px-4 py-3 text-sm text-gray-700 text-right">1</td>
+                <td className="px-4 py-3 text-sm text-gray-700 text-right">₦5,000</td>
+                <td className="px-4 py-3 text-sm text-gray-900 font-medium text-right">₦5,000</td>
               </tr>
             </tbody>
           </table>
@@ -333,15 +690,16 @@ export function Templates() {
               </div>
               <div className="flex justify-between text-lg font-bold pt-2 border-t border-gray-200">
                 <span className="text-gray-900">Total:</span>
-                <span className="text-primary-400">₦5,500</span>
+                <span className="text-primary-400" style={{ color: selectedTemplate?.primary_color || '#41BAC4' }}>₦5,500</span>
               </div>
             </div>
           </div>
 
           <div className="text-center text-sm text-gray-500 pt-8 border-t border-gray-200">
-            Thank you for your business!
+            {selectedTemplate?.footer_text || 'Thank you for your business!'}
           </div>
         </div>
       </Modal>
-    </div>;
+    </div>
+  );
 }

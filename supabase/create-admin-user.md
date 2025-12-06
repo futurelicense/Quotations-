@@ -139,3 +139,4 @@ After creating the admin user:
 - Verify the password is exactly: `Abc123456`
 - Check browser console for errors
 
+
