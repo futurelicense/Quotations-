@@ -1,5 +1,5 @@
 import { supabase } from '../lib/supabase';
-import type { Client, Product, Quotation, Invoice, Payment } from '../types';
+import type { Client, Product } from '../types';
 
 // Clients Service
 export class ClientsService {
@@ -652,7 +652,6 @@ export class AnalyticsService {
     const now = new Date();
     const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
     const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-    const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0);
 
     // Get current month revenue from invoices
     const { data: currentInvoices, error: invoicesError } = await supabase
@@ -760,10 +759,9 @@ export class AnalyticsService {
     if (paymentsError) throw paymentsError;
 
     const paymentMethods: Record<string, number> = {};
-    const totalPaid = payments?.reduce((sum, p) => {
+    payments?.forEach(p => {
       paymentMethods[p.method] = (paymentMethods[p.method] || 0) + (parseFloat(p.amount) || 0);
-      return sum + (parseFloat(p.amount) || 0);
-    }, 0) || 0;
+    });
 
     // Calculate current month collection rate
     const currentMonthTotalPaid = payments?.filter(p => {
@@ -775,7 +773,7 @@ export class AnalyticsService {
     const currentCollectionRate = currentMonthInvoiceAmount > 0 ? ((currentMonthTotalPaid / currentMonthInvoiceAmount) * 100) : 0;
 
     // Get last month payments
-    const { data: lastMonthPayments, error: lastMonthPaymentsError } = await supabase
+    const { data: lastMonthPayments } = await supabase
       .from('payments')
       .select('amount')
       .eq('user_id', userId)

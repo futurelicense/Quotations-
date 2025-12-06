@@ -39,9 +39,10 @@ class ApiClient {
 
     try {
       const token = this.getAuthToken();
-      const headers: HeadersInit = {
+      const existingHeaders = fetchConfig.headers ? (fetchConfig.headers as Record<string, string>) : {};
+      const headers: Record<string, string> = {
         'Content-Type': 'application/json',
-        ...fetchConfig.headers,
+        ...existingHeaders,
       };
 
       if (token) {
@@ -136,7 +137,7 @@ class ApiClient {
     }
 
     const token = this.getAuthToken();
-    const headers: HeadersInit = {};
+    const headers: Record<string, string> = {};
 
     if (token) {
       headers['Authorization'] = `Bearer ${token}`;

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
@@ -9,7 +9,7 @@ import { Badge } from '../components/ui/Badge';
 import { useToast } from '../components/ui/Toast';
 import { useAuth } from '../contexts/AuthContext';
 import { settingsService } from '../services/supabase-client.service';
-import { BuildingIcon, DollarSignIcon, UsersIcon, BellIcon, CreditCardIcon, SaveIcon } from 'lucide-react';
+import { BuildingIcon, BellIcon, SaveIcon } from 'lucide-react';
 
 export function Settings() {
   const [loading, setLoading] = useState(true);
