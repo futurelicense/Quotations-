@@ -1,6 +1,6 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { supabaseAuthService } from '../services/supabase-auth.service';
-import type { User as SupabaseUser } from '@supabase/supabase-js';
+import type { User } from '../types';
 
 interface UserProfile {
   id: string;
@@ -12,7 +12,7 @@ interface UserProfile {
 }
 
 interface AuthContextType {
-  user: SupabaseUser | null;
+  user: User | null;
   profile: UserProfile | null;
   isLoading: boolean;
   isAuthenticated: boolean;
@@ -25,7 +25,7 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<SupabaseUser | null>(null);
+  const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -33,11 +33,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Check for existing session
     const initAuth = async () => {
       try {
-        const session = await supabaseAuthService.getSession();
-        if (session?.user) {
-          setUser(session.user);
+        const currentUser = await supabaseAuthService.getCurrentUser();
+        if (currentUser) {
+          setUser(currentUser);
           // Fetch user profile
-          const userProfile = await supabaseAuthService.getUserProfile(session.user.id);
+          const userProfile = await supabaseAuthService.getUserProfile(currentUser.id);
           if (userProfile) {
             setProfile({
               id: userProfile.id,
@@ -64,18 +64,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         console.log('Auth state changed:', event);
         
         if (session?.user) {
-          setUser(session.user);
           try {
-            const userProfile = await supabaseAuthService.getUserProfile(session.user.id);
-            if (userProfile) {
-              setProfile({
-                id: userProfile.id,
-                email: userProfile.email,
-                fullName: userProfile.full_name,
-                avatarUrl: userProfile.avatar_url,
-                company: userProfile.company,
-                role: userProfile.role,
-              });
+            const currentUser = await supabaseAuthService.getCurrentUser();
+            if (currentUser) {
+              setUser(currentUser);
+              const userProfile = await supabaseAuthService.getUserProfile(currentUser.id);
+              if (userProfile) {
+                setProfile({
+                  id: userProfile.id,
+                  email: userProfile.email,
+                  fullName: userProfile.full_name,
+                  avatarUrl: userProfile.avatar_url,
+                  company: userProfile.company,
+                  role: userProfile.role,
+                });
+              }
             }
           } catch (error) {
             console.error('Failed to fetch profile:', error);

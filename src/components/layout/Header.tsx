@@ -1,4 +1,3 @@
-import React from 'react';
 import { BellIcon, SearchIcon, UserIcon } from 'lucide-react';
 export function Header() {
   return <header className="bg-white border-b border-gray-200 h-16 fixed top-0 right-0 left-64 z-10">

@@ -12,7 +12,7 @@ import { useToast } from '../components/ui/Toast';
 import { useAuth } from '../contexts/AuthContext';
 import { invoicesService, clientsService } from '../services/supabase-client.service';
 import { generateInvoiceNumber } from '../utils/generators';
-import { PlusIcon, SearchIcon, ReceiptIcon, EditIcon, TrashIcon, CheckCircleIcon } from 'lucide-react';
+import { PlusIcon, SearchIcon, ReceiptIcon, TrashIcon, CheckCircleIcon } from 'lucide-react';
 
 interface InvoiceFormData {
   client_id: string;
@@ -77,12 +77,12 @@ export function Invoices() {
     }
   };
 
-  const calculateLineItemTotal = (item: any) => {
-    const baseAmount = item.quantity * item.unit_price;
-    const afterDiscount = baseAmount * (1 - item.discount / 100);
-    const withTax = afterDiscount * (1 + item.tax_rate / 100);
-    return withTax;
-  };
+  // const calculateLineItemTotal = (item: any) => {
+  //   const baseAmount = item.quantity * item.unit_price;
+  //   const afterDiscount = baseAmount * (1 - item.discount / 100);
+  //   const withTax = afterDiscount * (1 + item.tax_rate / 100);
+  //   return withTax;
+  // };
 
   const calculateTotal = () => {
     const subtotal = lineItems.reduce((sum, item) => {
@@ -334,13 +334,10 @@ export function Invoices() {
             icon={<ReceiptIcon className="w-12 h-12" />}
             title="No invoices found"
             description={searchQuery ? "No invoices match your search" : "Create your first invoice"}
-            action={
-              !searchQuery && (
-                <Button onClick={() => setIsModalOpen(true)}>
-                  Create Your First Invoice
-                </Button>
-              )
-            }
+            action={!searchQuery ? {
+              label: 'Create Your First Invoice',
+              onClick: () => setIsModalOpen(true)
+            } : undefined}
           />
         ) : (
           <Table columns={columns} data={filteredInvoices} />

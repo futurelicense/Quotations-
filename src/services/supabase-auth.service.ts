@@ -147,7 +147,7 @@ class SupabaseAuthService {
   /**
    * Get user profile from database
    */
-  private async getUserProfile(userId: string) {
+  async getUserProfile(userId: string) {
     const { data, error } = await supabase
       .from('profiles')
       .select('*')

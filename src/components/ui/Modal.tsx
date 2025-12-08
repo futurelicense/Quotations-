@@ -1,6 +1,5 @@
 import React from 'react';
 import { XIcon } from 'lucide-react';
-import { Button } from './Button';
 interface ModalProps {
   isOpen: boolean;
   onClose: () => void;

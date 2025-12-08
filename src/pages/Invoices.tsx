@@ -200,7 +200,7 @@ export function Invoices() {
   }, {
     key: 'actions',
     label: 'Actions',
-    render: (value: any, row: Invoice) => <Dropdown items={[{
+    render: (_value: any, row: Invoice) => <Dropdown items={[{
       label: 'View',
       icon: <EyeIcon className="w-4 h-4" />,
       onClick: () => alert(`Viewing ${row.invoiceNumber}`)

@@ -223,13 +223,10 @@ export function ClientsNew() {
             icon={<UsersIcon className="w-12 h-12" />}
             title="No clients found"
             description={searchQuery ? "No clients match your search" : "Add your first client to get started"}
-            action={
-              !searchQuery && (
-                <Button onClick={() => setIsModalOpen(true)}>
-                  Add Your First Client
-                </Button>
-              )
-            }
+            action={!searchQuery ? {
+              label: 'Add Your First Client',
+              onClick: () => setIsModalOpen(true)
+            } : undefined}
           />
         ) : (
           <Table columns={columns} data={filteredClients} />

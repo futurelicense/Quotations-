@@ -10,7 +10,7 @@ import { Textarea } from '../components/ui/Textarea';
 import { useToast } from '../components/ui/Toast';
 import { useAuth } from '../contexts/AuthContext';
 import { automationsService, clientsService } from '../services/supabase-client.service';
-import { PlusIcon, ZapIcon, BellIcon, RepeatIcon, MailIcon, TrashIcon, EditIcon, SaveIcon } from 'lucide-react';
+import { PlusIcon, ZapIcon, BellIcon, RepeatIcon, TrashIcon, SaveIcon } from 'lucide-react';
 
 export function Automation() {
   const [isRecurringModalOpen, setIsRecurringModalOpen] = useState(false);
@@ -20,7 +20,7 @@ export function Automation() {
   const [clients, setClients] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const [editingAutomation, setEditingAutomation] = useState<any>(null);
+  // const [editingAutomation, setEditingAutomation] = useState<any>(null);
   const [recurringForm, setRecurringForm] = useState({
     clientId: '',
     amount: '',
@@ -381,7 +381,7 @@ export function Automation() {
                           </div>
                           <div>
                             <p className="font-medium text-gray-900">
-                              {config.type?.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase()) || 'Reminder'}
+                              {config.type?.replace('_', ' ').replace(/\b\w/g, (l: string) => l.toUpperCase()) || 'Reminder'}
                             </p>
                             <p className="text-sm text-gray-500">{formatTrigger(automation)}</p>
                           </div>
@@ -443,7 +443,7 @@ export function Automation() {
                           </div>
                           <div>
                             <p className="font-medium text-gray-900">{automation.name}</p>
-                            <p className="text-sm text-gray-500">Trigger: {config.trigger?.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase()) || 'N/A'}</p>
+                            <p className="text-sm text-gray-500">Trigger: {config.trigger?.replace('_', ' ').replace(/\b\w/g, (l: string) => l.toUpperCase()) || 'N/A'}</p>
                             <p className="text-sm text-gray-500">Actions: {Array.isArray(config.actions) ? config.actions.join(', ') : 'N/A'}</p>
                           </div>
                         </div>
