@@ -11,7 +11,7 @@ import { EmptyState } from '../components/ui/EmptyState';
 import { useToast } from '../components/ui/Toast';
 import { useAuth } from '../contexts/AuthContext';
 import { productsService } from '../services/supabase-client.service';
-import { PlusIcon, SearchIcon, PackageIcon, EditIcon, TrashIcon, DollarSignIcon } from 'lucide-react';
+import { PlusIcon, SearchIcon, PackageIcon, EditIcon, TrashIcon } from 'lucide-react';
 
 interface ProductFormData {
   name: string;
@@ -73,10 +73,16 @@ export function Products() {
 
     try {
       if (editingProduct) {
-        await productsService.update(editingProduct.id, formData);
+        await productsService.update(editingProduct.id, {
+          ...formData,
+          taxRate: formData.tax_rate
+        });
         toast.success('Product updated successfully');
       } else {
-        await productsService.create(user!.id, formData);
+        await productsService.create(user!.id, {
+          ...formData,
+          taxRate: formData.tax_rate
+        });
         toast.success('Product created successfully');
       }
       
@@ -231,13 +237,10 @@ export function Products() {
             icon={<PackageIcon className="w-12 h-12" />}
             title="No products found"
             description={searchQuery ? "No products match your search" : "Add your first product or service to get started"}
-            action={
-              !searchQuery && (
-                <Button onClick={() => setIsModalOpen(true)}>
-                  Add Your First Product
-                </Button>
-              )
-            }
+            action={!searchQuery ? {
+              label: 'Add Your First Product',
+              onClick: () => setIsModalOpen(true)
+            } : undefined}
           />
         ) : (
           <Table columns={columns} data={filteredProducts} />

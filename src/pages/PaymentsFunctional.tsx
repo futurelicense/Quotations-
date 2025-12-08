@@ -243,13 +243,10 @@ export function Payments() {
             icon={<DollarSignIcon className="w-12 h-12" />}
             title="No payments found"
             description={searchQuery ? "No payments match your search" : "Record your first payment"}
-            action={
-              !searchQuery && (
-                <Button onClick={() => setIsModalOpen(true)}>
-                  Record Your First Payment
-                </Button>
-              )
-            }
+            action={!searchQuery ? {
+              label: 'Record Your First Payment',
+              onClick: () => setIsModalOpen(true)
+            } : undefined}
           />
         ) : (
           <Table columns={columns} data={filteredPayments} />

@@ -248,7 +248,7 @@ export function Quotations() {
     {
       key: 'actions',
       label: 'Actions',
-      render: (_: any, _row: any) => (
+      render: (_: any, row: any) => (
         <div className="flex gap-2">
           {row.status !== 'converted' && (
             <Button 

@@ -11,7 +11,7 @@ import { EmptyState } from '../components/ui/EmptyState';
 import { useToast } from '../components/ui/Toast';
 import { useAuth } from '../contexts/AuthContext';
 import { productsService } from '../services/supabase-client.service';
-import { PlusIcon, SearchIcon, PackageIcon, EditIcon, TrashIcon, DollarSignIcon } from 'lucide-react';
+import { PlusIcon, SearchIcon, PackageIcon, EditIcon, TrashIcon } from 'lucide-react';
 
 interface ProductFormData {
   name: string;
@@ -73,10 +73,16 @@ export function Products() {
 
     try {
       if (editingProduct) {
-        await productsService.update(editingProduct.id, formData);
+        await productsService.update(editingProduct.id, {
+          ...formData,
+          taxRate: formData.tax_rate
+        });
         toast.success('Product updated successfully');
       } else {
-        await productsService.create(user!.id, formData);
+        await productsService.create(user!.id, {
+          ...formData,
+          taxRate: formData.tax_rate
+        });
         toast.success('Product created successfully');
       }
       
