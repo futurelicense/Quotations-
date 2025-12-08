@@ -74,14 +74,28 @@ export function Products() {
     try {
       if (editingProduct) {
         await productsService.update(editingProduct.id, {
-          ...formData,
-          taxRate: formData.tax_rate
+          name: formData.name,
+          description: formData.description,
+          type: formData.type,
+          sku: formData.sku,
+          price: formData.price,
+          currency: formData.currency,
+          taxRate: formData.tax_rate,
+          category: formData.category,
+          status: formData.status
         });
         toast.success('Product updated successfully');
       } else {
         await productsService.create(user!.id, {
-          ...formData,
-          taxRate: formData.tax_rate
+          name: formData.name,
+          description: formData.description,
+          type: formData.type,
+          sku: formData.sku,
+          price: formData.price,
+          currency: formData.currency,
+          taxRate: formData.tax_rate,
+          category: formData.category,
+          status: formData.status
         });
         toast.success('Product created successfully');
       }
@@ -240,7 +254,7 @@ export function Products() {
             action={!searchQuery ? {
               label: 'Add Your First Product',
               onClick: () => setIsModalOpen(true)
-            } : undefined}
+            } : undefined as { label: string; onClick: () => void } | undefined}
           />
         ) : (
           <Table columns={columns} data={filteredProducts} />

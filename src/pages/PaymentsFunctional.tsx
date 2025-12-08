@@ -246,7 +246,7 @@ export function Payments() {
             action={!searchQuery ? {
               label: 'Record Your First Payment',
               onClick: () => setIsModalOpen(true)
-            } : undefined}
+            } : undefined as { label: string; onClick: () => void } | undefined}
           />
         ) : (
           <Table columns={columns} data={filteredPayments} />
