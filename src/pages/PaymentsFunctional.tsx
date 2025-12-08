@@ -10,7 +10,7 @@ import { Badge } from '../components/ui/Badge';
 import { EmptyState } from '../components/ui/EmptyState';
 import { useToast } from '../components/ui/Toast';
 import { useAuth } from '../contexts/AuthContext';
-import { paymentsService, invoicesService, clientsService } from '../services/supabase-client.service';
+import { paymentsService, invoicesService } from '../services/supabase-client.service';
 import { PlusIcon, SearchIcon, DollarSignIcon, TrashIcon } from 'lucide-react';
 
 interface PaymentFormData {
